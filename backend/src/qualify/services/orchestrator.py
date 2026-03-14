@@ -4,9 +4,9 @@ import shutil
 import tempfile
 from datetime import datetime, timezone
 
-from app.models.state import Deployment, DeploymentStage, Environment, Project, Server
-from app.services import log_streamer, ssh_client, state_manager
-from app.services.compose_gen import generate_compose
+from qualify.models.state import Deployment, DeploymentStage, Environment, Project, Server
+from qualify.services import log_streamer, ssh_client, state_manager
+from qualify.services.compose_gen import generate_compose
 
 STAGES = ["git_clone", "docker_build", "registry_push", "remote_pull", "compose_up", "health_check"]
 

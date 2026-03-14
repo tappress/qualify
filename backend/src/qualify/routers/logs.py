@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
-from app.models.state import LogLine
-from app.services import log_streamer
+from qualify.models.state import LogLine
+from qualify.services import log_streamer
 
 router = APIRouter()
 

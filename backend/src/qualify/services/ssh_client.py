@@ -5,8 +5,8 @@ from pathlib import Path
 
 import asyncssh
 
-from app.models.state import Server
-from app.services.keyring_store import get_sudo_password
+from qualify.models.state import Server
+from qualify.services.keyring_store import get_sudo_password
 
 
 async def get_connection(server: Server) -> asyncssh.SSHClientConnection:

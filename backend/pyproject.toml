@@ -1,5 +1,5 @@
 [project]
-name = "qualify-backend"
+name = "qualify"
 version = "0.1.0"
 requires-python = ">=3.11"
 dependencies = [
@@ -14,6 +14,12 @@ dependencies = [
     "keyring>=25.0.0",
     "uuid-utils>=0.9.0",
 ]
+
+[project.optional-dependencies]
+dev = ["pyinstaller>=6.0.0"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/qualify"]
 
 [build-system]
 requires = ["hatchling"]

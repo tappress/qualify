@@ -2,7 +2,7 @@ import asyncio
 from datetime import datetime, timezone
 from pathlib import Path
 
-from app.models.state import AppSettings, Deployment, Environment, Project, Server, StateModel
+from qualify.models.state import AppSettings, Deployment, Environment, Project, Server, StateModel
 
 STATE_PATH = Path.home() / ".config" / "qualify" / "state.json"
 

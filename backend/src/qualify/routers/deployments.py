@@ -1,7 +1,7 @@
 from fastapi import APIRouter, BackgroundTasks, HTTPException
-from app.models.state import Deployment, DeploymentRequest
-from app.services import state_manager
-from app.services.orchestrator import run_deployment
+from qualify.models.state import Deployment, DeploymentRequest
+from qualify.services import state_manager
+from qualify.services.orchestrator import run_deployment
 
 router = APIRouter()
 

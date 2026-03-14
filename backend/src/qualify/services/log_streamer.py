@@ -1,7 +1,7 @@
 import asyncio
 from datetime import datetime, timezone
 from typing import AsyncGenerator
-from app.models.state import LogLine
+from qualify.models.state import LogLine
 
 _subscribers: dict[str, list[asyncio.Queue]] = {}
 _history: dict[str, list[LogLine]] = {}

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
-from app.models.state import Deployment, EnvParseRequest, InfraInference, Project, ProjectCreate, ProjectUpdate
-from app.services import state_manager
-from app.services.env_parser import parse_env_template
+from qualify.models.state import Deployment, EnvParseRequest, InfraInference, Project, ProjectCreate, ProjectUpdate
+from qualify.services import state_manager
+from qualify.services.env_parser import parse_env_template
 
 router = APIRouter()
 

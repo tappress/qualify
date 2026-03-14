@@ -1,11 +1,11 @@
 from fastapi import APIRouter, HTTPException
-from app.models.state import (
+from qualify.models.state import (
     Deployment, EnvVarCheck, Environment, EnvironmentCreate, EnvironmentUpdate,
     InfraInference,
 )
-from app.services import state_manager
-from app.services.env_parser import parse_env_template
-from app.services.keyring_store import get_cloudflare_token
+from qualify.services import state_manager
+from qualify.services.env_parser import parse_env_template
+from qualify.services.keyring_store import get_cloudflare_token
 
 router = APIRouter()
 

@@ -1,5 +1,5 @@
-from app.models.state import CheckResult, Server
-from app.services import ssh_client
+from qualify.models.state import CheckResult, Server
+from qualify.services import ssh_client
 
 
 async def run_preflight(server: Server) -> list[CheckResult]:

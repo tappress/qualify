@@ -1,5 +1,5 @@
 import yaml
-from app.models.state import Environment, Project
+from qualify.models.state import Environment, Project
 
 
 def generate_compose(project: Project, env: Environment, image_tag: str) -> str:

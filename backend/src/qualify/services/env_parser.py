@@ -1,5 +1,5 @@
 import re
-from app.models.state import InfraInference
+from qualify.models.state import InfraInference
 
 _POSTGRES = [r"DATABASE_URL", r"POSTGRES_", r"^PG_", r"DB_URL", r"DB_HOST", r"DB_NAME", r"DB_USER"]
 _REDIS    = [r"REDIS_", r"CELERY_BROKER", r"CACHE_URL"]

@@ -1,8 +1,8 @@
 from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException
-from app.models.state import CheckResult, ConnectionTestResult, Server, ServerCreate, ServerUpdate
-from app.services import preflight, ssh_client, state_manager
-from app.services.keyring_store import delete_sudo_password, store_sudo_password
+from qualify.models.state import CheckResult, ConnectionTestResult, Server, ServerCreate, ServerUpdate
+from qualify.services import preflight, ssh_client, state_manager
+from qualify.services.keyring_store import delete_sudo_password, store_sudo_password
 
 router = APIRouter()
 

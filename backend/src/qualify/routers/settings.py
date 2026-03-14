@@ -1,7 +1,7 @@
 from fastapi import APIRouter
-from app.models.state import AppSettings, SettingsUpdate
-from app.services import state_manager
-from app.services.keyring_store import (
+from qualify.models.state import AppSettings, SettingsUpdate
+from qualify.services import state_manager
+from qualify.services.keyring_store import (
     delete_cloudflare_token, store_cloudflare_token,
 )
 
