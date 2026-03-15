@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import {
   ArrowLeft, Wifi, CheckCircle, AlertCircle, XCircle, MinusCircle,
-  RefreshCw, HardDrive, Server as ServerIcon, ChevronRight,
+  RefreshCw, HardDrive, Server as ServerIcon, ChevronRight, Terminal,
 } from "lucide-react"
 
 // ── Preflight check icon ──────────────────────────────────────────────────────
@@ -82,6 +82,7 @@ export default function ServerDetail() {
     queryFn: () => api.get("/projects/").then((r) => r.data),
   })
 
+
   const testConn = useMutation({
     mutationFn: () => api.post(`/servers/${id}/test-connection`).then((r) => r.data),
     onSuccess: (data) => setTestResult(data),
@@ -101,9 +102,9 @@ export default function ServerDetail() {
     mutationFn: () => api.post(`/servers/${id}/qualify`).then((r) => r.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["server", id] })
-      toast.success("Preflight complete")
+      toast.success("Health check complete")
     },
-    onError: () => toast.error("Preflight failed"),
+    onError: () => toast.error("Health check failed"),
   })
 
   const envs = allEnvs?.filter((e) => e.server_id === id) ?? []
@@ -138,7 +139,7 @@ export default function ServerDetail() {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-xl font-semibold tracking-tight">{server.name}</h1>
-            <ServerStatusBadge status={server.status} />
+            {server.status !== "unknown" && <ServerStatusBadge status={server.status} />}
           </div>
           <p className="text-xs text-muted-foreground font-mono mt-1">
             {server.user}@{server.host}:{server.port}
@@ -178,9 +179,42 @@ export default function ServerDetail() {
           disabled={isBusy || server.status === "qualifying"}
         >
           <RefreshCw size={15} className={qualify.isPending ? "animate-spin" : ""} />
-          {qualify.isPending ? "Running preflight…" : "Run Preflight"}
+          {qualify.isPending ? "Checking…" : "Run Health Check"}
         </Button>
       </div>
+
+      {/* ── Command log link ── */}
+      <Link
+        to={`/servers/${id}/log`}
+        className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <Terminal size={12} />
+        View command log
+        <ChevronRight size={11} className="opacity-50" />
+      </Link>
+
+      {/* ── Last error ── */}
+      {(server.status === "bootstrap_failed" || server.status === "failed") && server.last_error && (
+        <div className="rounded-lg border border-red-500/20 bg-red-500/5 px-4 py-3 space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-red-400 text-xs font-semibold uppercase tracking-wider">
+              <XCircle size={13} />
+              {server.status === "bootstrap_failed" ? "Bootstrap failed" : "Health check failed"}
+            </div>
+            <a
+              href={`https://github.com/tappress/qualify/issues/new?title=${encodeURIComponent("Bootstrap failed: " + server.last_error.split("\n")[0].slice(0, 80))}&body=${encodeURIComponent("**OS:** " + (server.os_name ? `${server.os_name} ${server.os_version ?? ""}`.trim() : "unknown") + "\n\n**Error:**\n```\n" + server.last_error + "\n```")}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-red-500/15 text-red-300 hover:bg-red-500/25 border border-red-500/20 transition-colors shrink-0"
+            >
+              Report issue ↗
+            </a>
+          </div>
+          <pre className="text-xs text-red-300/80 font-mono whitespace-pre-wrap break-all leading-relaxed">
+            {server.last_error}
+          </pre>
+        </div>
+      )}
 
       {/* ── Connection test result ── */}
       {testResult && (
@@ -239,7 +273,7 @@ export default function ServerDetail() {
         <div className="bg-card border border-border rounded-lg">
           <div className="px-4 py-3 border-b border-border">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Preflight Results
+              Health Check Results
             </h2>
           </div>
           <div className="divide-y divide-border">

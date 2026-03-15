@@ -1,12 +1,15 @@
 from qualify.models.state import CheckResult, Server
 from qualify.services import ssh_client
+from qualify.services.keyring_store import get_sudo_password
+from qualify.services.server_audit import AuditedConn
 
 
-async def run_preflight(server: Server) -> list[CheckResult]:
+async def run_preflight(server: Server, audit_stage: str = "preflight") -> list[CheckResult]:
     results: list[CheckResult] = []
 
     try:
-        conn, _ = await ssh_client.get_connection(server)
+        raw_conn, _ = await ssh_client.get_connection(server)
+        conn = AuditedConn(raw_conn, audit_stage, sudo_password=get_sudo_password(server.id))
     except Exception as e:
         return [CheckResult(check="ssh_connect", status="fail", message=str(e))]
 
@@ -24,7 +27,7 @@ async def run_preflight(server: Server) -> list[CheckResult]:
             status="pass" if rc == 0 else "fail",
             message=out if rc == 0 else err or "Docker not found"))
 
-    await chk("docker_running", "docker info --format '{{.ServerVersion}}'",
+    await chk("docker_running", "sudo docker info --format '{{.ServerVersion}}'",
         lambda rc, out, err: CheckResult(check="docker_running",
             status="pass" if rc == 0 else "fail",
             message=f"Docker Engine {out}" if rc == 0 else "Docker daemon not running"))
@@ -58,6 +61,11 @@ async def run_preflight(server: Server) -> list[CheckResult]:
         lambda rc, out, err: CheckResult(check="sudo_access",
             status="pass" if "ok" in out else "warn",
             message="Passwordless sudo available" if "ok" in out else "Sudo requires password (stored in keyring)"))
+
+    await chk("firewall", "sudo ufw status | head -1",
+        lambda rc, out, err: CheckResult(check="firewall",
+            status="pass" if "active" in out.lower() else "warn",
+            message="UFW active" if "active" in out.lower() else "UFW inactive — swarm ports may be exposed"))
 
     await chk("disk_space", "df -h / | tail -1 | awk '{print $5, $4}'",
         lambda rc, out, err: _parse_disk(out))

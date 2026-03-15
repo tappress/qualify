@@ -133,7 +133,7 @@ export default function ServersPage() {
                 <div className="min-w-0">
                   <p className="font-medium text-sm leading-tight">{s.name}</p>
                   <p className="text-xs text-muted-foreground font-mono mt-0.5 truncate">
-                    {s.user}@{s.host}:{s.port}
+                    {s.host}{s.port !== 22 ? `:${s.port}` : ""}
                   </p>
                 </div>
               </div>

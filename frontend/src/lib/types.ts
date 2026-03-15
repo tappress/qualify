@@ -22,6 +22,7 @@ export interface Server {
   os_version?: string
   last_qualified_at?: string
   qualify_results: CheckResult[]
+  last_error?: string
   created_at: string
 }
 
@@ -90,6 +91,14 @@ export interface Deployment {
   build_strategy: "local" | "remote"
   stages: DeploymentStage[]
   error?: string
+}
+
+export interface AuditEntry {
+  ts: string
+  stage: string
+  cmd: string
+  rc: number
+  err?: string
 }
 
 export interface LogLine {

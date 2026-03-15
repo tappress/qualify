@@ -53,6 +53,7 @@ class Server(BaseModel):
     os_version: Optional[str] = None
     last_qualified_at: Optional[datetime] = None
     qualify_results: list[CheckResult] = []
+    last_error: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 

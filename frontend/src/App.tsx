@@ -3,6 +3,7 @@ import AppLayout from "./components/AppLayout"
 import Dashboard from "./pages/Dashboard"
 import ServersPage from "./pages/ServersPage"
 import ServerDetail from "./pages/ServerDetail"
+import ServerAuditLog from "./pages/ServerAuditLog"
 import ProjectsPage from "./pages/ProjectsPage"
 import ProjectDetail from "./pages/ProjectDetail"
 import DeploymentLogs from "./pages/DeploymentLogs"
@@ -16,6 +17,7 @@ export default function App() {
           <Route index element={<Dashboard />} />
           <Route path="servers" element={<ServersPage />} />
           <Route path="servers/:id" element={<ServerDetail />} />
+          <Route path="servers/:id/log" element={<ServerAuditLog />} />
           <Route path="projects" element={<ProjectsPage />} />
           <Route path="projects/:id" element={<ProjectDetail />} />
           <Route path="deployments/:id" element={<DeploymentLogs />} />
