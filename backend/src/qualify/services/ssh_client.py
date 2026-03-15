@@ -21,11 +21,18 @@ async def get_connection(server: Server) -> tuple[asyncssh.SSHClientConnection, 
     }
     has_key = bool(key_path and Path(key_path).exists())
 
-    # If we already know which method works, use it directly
+    # If we already know which method works, use it directly.
+    # client_keys=[] disables automatic key loading so asyncssh doesn't offer
+    # keys alongside the password, which can exhaust MaxAuthTries on some servers.
     if server.auth_method == "key" and has_key:
         return await asyncssh.connect(**kwargs, client_keys=[key_path]), "key"
-    if server.auth_method == "password" and pw:
-        return await asyncssh.connect(**kwargs, password=pw), "password"
+    if server.auth_method == "password":
+        if not pw:
+            raise RuntimeError(
+                f"Server {server.name!r} uses password auth but the stored password "
+                "is unavailable from the OS keyring. Re-save the server with its SSH password."
+            )
+        return await asyncssh.connect(**kwargs, password=pw, client_keys=[]), "password"
 
     # First connect: try key → fall back to password
     if has_key:
@@ -33,10 +40,10 @@ async def get_connection(server: Server) -> tuple[asyncssh.SSHClientConnection, 
             return await asyncssh.connect(**kwargs, client_keys=[key_path]), "key"
         except asyncssh.PermissionDenied:
             if pw:
-                return await asyncssh.connect(**kwargs, password=pw), "password"
+                return await asyncssh.connect(**kwargs, password=pw, client_keys=[]), "password"
             raise
     if pw:
-        return await asyncssh.connect(**kwargs, password=pw), "password"
+        return await asyncssh.connect(**kwargs, password=pw, client_keys=[]), "password"
     return await asyncssh.connect(**kwargs), "key"
 
 

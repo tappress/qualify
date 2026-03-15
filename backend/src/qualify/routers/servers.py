@@ -7,6 +7,7 @@ from qualify.models.state import CheckResult, ConnectionTestResult, Server, Serv
 from qualify.services import preflight, ssh_client, state_manager
 from qualify.services.keyring_store import delete_sudo_password, get_sudo_password, store_sudo_password
 from qualify.services.provisioner import UnsupportedOSError, detect_os, get_provisioner
+from qualify.services.provisioner.base import REGISTRY_HOSTNAME, REGISTRY_PORT, WG_SUBNET
 from qualify.services import server_audit
 
 router = APIRouter()
@@ -100,9 +101,17 @@ async def bootstrap_server(server_id: str):
         server.os_version = os_info.version
         await state_manager.update_servers(state.servers)
         provisioner = get_provisioner(os_info)
-        await provisioner.bootstrap(conn, advertise_addr=server.host, ssh_port=server.port)
+        bootstrapped = [s for s in state.servers if s.wg_ip]
+        wg_ip = f"{WG_SUBNET}.{len(bootstrapped) + 1}"
+        wg_info = await provisioner.bootstrap(
+            conn, advertise_addr=server.host, ssh_port=server.port, wg_ip=wg_ip,
+        )
+        server.wg_ip = wg_info["wg_ip"]
+        server.wg_public_key = wg_info["wg_public_key"]
         server.status = "unknown"  # ready for qualify
         server.bootstrapped_at = datetime.now(timezone.utc)
+        state.settings.registry.url = f"{REGISTRY_HOSTNAME}:{REGISTRY_PORT}"
+        await state_manager.update_settings(state.settings)
     except UnsupportedOSError as e:
         server.status = "bootstrap_failed"
         server.last_error = str(e)

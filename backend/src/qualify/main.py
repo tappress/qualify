@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from qualify.routers import servers, projects, environments, deployments, logs, settings as settings_router
+from qualify.services import state_manager
 from qualify.services.state_manager import get_state
 from qualify.services.auth import verify_token
 
@@ -20,7 +21,22 @@ else:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await get_state()
+    state = await state_manager.get_state()
+    # Transient statuses ("bootstrapping", "qualifying") mean an operation was
+    # in-flight when the server last stopped. Reset them so the UI isn't stuck.
+    changed = False
+    for server in state.servers:
+        if server.status in ("bootstrapping", "qualifying"):
+            server.status = "unknown"
+            changed = True
+    for dep in state.deployments:
+        if dep.status == "running":
+            dep.status = "failed"
+            dep.error = "Interrupted by server restart"
+            changed = True
+    if changed:
+        await state_manager.update_servers(state.servers)
+        await state_manager.update_deployments(state.deployments)
     yield
 
 

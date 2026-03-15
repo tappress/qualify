@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import {
   ArrowLeft, Wifi, CheckCircle, AlertCircle, XCircle, MinusCircle,
   RefreshCw, HardDrive, Server as ServerIcon, ChevronRight, Terminal,
+  Loader2,
 } from "lucide-react"
 
 // ── Preflight check icon ──────────────────────────────────────────────────────
@@ -32,15 +33,15 @@ const SERVER_STATUS: Record<
   bootstrap_failed: { dot: "bg-red-500",     text: "text-red-400",     bg: "bg-red-500/10",     label: "bootstrap failed" },
   qualifying:       { dot: "bg-blue-400 animate-pulse", text: "text-blue-400", bg: "bg-blue-500/10", label: "qualifying" },
   bootstrapping:    { dot: "bg-blue-400 animate-pulse", text: "text-blue-400", bg: "bg-blue-500/10", label: "bootstrapping" },
-  unknown:          { dot: "bg-zinc-500",    text: "text-zinc-400",    bg: "bg-zinc-500/10",    label: "unknown" },
+  unknown:          { dot: "bg-zinc-500",    text: "text-zinc-400",    bg: "bg-zinc-500/10",    label: "not set up" },
 }
 
-function ServerStatusBadge({ status }: { status: Server["status"] }) {
+function ServerStatusBadge({ status, overrideLabel }: { status: Server["status"]; overrideLabel?: string }) {
   const s = SERVER_STATUS[status] ?? SERVER_STATUS.unknown
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium ${s.bg} ${s.text}`}>
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium ${s.bg} ${s.text}`}>
       <span className={`inline-block w-1.5 h-1.5 rounded-full shrink-0 ${s.dot}`} />
-      {s.label}
+      {overrideLabel ?? s.label}
     </span>
   )
 }
@@ -82,7 +83,6 @@ export default function ServerDetail() {
     queryFn: () => api.get("/projects/").then((r) => r.data),
   })
 
-
   const testConn = useMutation({
     mutationFn: () => api.post(`/servers/${id}/test-connection`).then((r) => r.data),
     onSuccess: (data) => setTestResult(data),
@@ -108,6 +108,7 @@ export default function ServerDetail() {
   })
 
   const envs = allEnvs?.filter((e) => e.server_id === id) ?? []
+  const isBusy = bootstrap.isPending || qualify.isPending || testConn.isPending
 
   if (isLoading) {
     return (
@@ -123,8 +124,6 @@ export default function ServerDetail() {
     )
   }
 
-  const isBusy = bootstrap.isPending || qualify.isPending || testConn.isPending
-
   return (
     <div className="p-6 max-w-3xl mx-auto space-y-6">
 
@@ -139,63 +138,32 @@ export default function ServerDetail() {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-xl font-semibold tracking-tight">{server.name}</h1>
-            {server.status !== "unknown" && <ServerStatusBadge status={server.status} />}
+            {server.status === "unknown" && !server.bootstrapped_at ? null : (
+              <ServerStatusBadge
+                status={server.status}
+                overrideLabel={server.status === "unknown" && server.bootstrapped_at ? "bootstrapped" : undefined}
+              />
+            )}
           </div>
           <p className="text-xs text-muted-foreground font-mono mt-1">
             {server.user}@{server.host}:{server.port}
+            {server.os_name && (
+              <span className="ml-2 opacity-60">· {server.os_name} {server.os_version ?? ""}</span>
+            )}
           </p>
         </div>
+        <Link
+          to={`/servers/${id}/log`}
+          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-md hover:bg-muted/50"
+        >
+          <Terminal size={13} />
+          Command log
+        </Link>
       </div>
-
-      {/* ── Action buttons ── */}
-      <div className="flex gap-3 flex-wrap">
-        <Button
-          variant="outline"
-          className="h-10 gap-2 border-border"
-          onClick={() => testConn.mutate()}
-          disabled={isBusy}
-        >
-          <Wifi size={15} className={testConn.isPending ? "animate-pulse" : ""} />
-          {testConn.isPending ? "Testing…" : "Test Connection"}
-        </Button>
-
-        <Button
-          variant="outline"
-          className="h-10 gap-2 border-border"
-          onClick={() => bootstrap.mutate()}
-          disabled={isBusy || server.status === "bootstrapping"}
-        >
-          <HardDrive size={15} className={bootstrap.isPending ? "animate-pulse" : ""} />
-          {bootstrap.isPending
-            ? "Bootstrapping…"
-            : server.bootstrapped_at
-            ? "Re-bootstrap"
-            : "Bootstrap"}
-        </Button>
-
-        <Button
-          className="h-10 gap-2"
-          onClick={() => qualify.mutate()}
-          disabled={isBusy || server.status === "qualifying"}
-        >
-          <RefreshCw size={15} className={qualify.isPending ? "animate-spin" : ""} />
-          {qualify.isPending ? "Checking…" : "Run Health Check"}
-        </Button>
-      </div>
-
-      {/* ── Command log link ── */}
-      <Link
-        to={`/servers/${id}/log`}
-        className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-      >
-        <Terminal size={12} />
-        View command log
-        <ChevronRight size={11} className="opacity-50" />
-      </Link>
 
       {/* ── Last error ── */}
       {(server.status === "bootstrap_failed" || server.status === "failed") && server.last_error && (
-        <div className="rounded-lg border border-red-500/20 bg-red-500/5 px-4 py-3 space-y-2">
+        <div className="rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-4 space-y-3">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 text-red-400 text-xs font-semibold uppercase tracking-wider">
               <XCircle size={13} />
@@ -210,7 +178,7 @@ export default function ServerDetail() {
               Report issue ↗
             </a>
           </div>
-          <pre className="text-xs text-red-300/80 font-mono whitespace-pre-wrap break-all leading-relaxed">
+          <pre className="text-xs text-red-300/80 font-mono whitespace-pre-wrap break-all leading-relaxed max-h-40 overflow-y-auto">
             {server.last_error}
           </pre>
         </div>
@@ -219,7 +187,7 @@ export default function ServerDetail() {
       {/* ── Connection test result ── */}
       {testResult && (
         <div
-          className={`flex items-center gap-2.5 px-4 py-3 rounded-lg text-sm border ${
+          className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-sm border ${
             testResult.success
               ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
               : "bg-red-500/10 border-red-500/20 text-red-400"
@@ -241,8 +209,42 @@ export default function ServerDetail() {
         </div>
       )}
 
+      {/* ── Actions ── */}
+      <div className="flex gap-3 flex-wrap">
+        <Button
+          variant="outline"
+          onClick={() => testConn.mutate()}
+          disabled={isBusy}
+          className="gap-2"
+        >
+          <Wifi size={15} className={testConn.isPending ? "animate-pulse" : ""} />
+          {testConn.isPending ? "Testing…" : "Test Connection"}
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => bootstrap.mutate()}
+          disabled={isBusy || server.status === "bootstrapping"}
+          className="gap-2"
+        >
+          <HardDrive size={15} className={bootstrap.isPending ? "animate-pulse" : ""} />
+          {bootstrap.isPending
+            ? "Bootstrapping…"
+            : server.bootstrapped_at
+            ? "Re-bootstrap"
+            : "Bootstrap"}
+        </Button>
+        <Button
+          onClick={() => qualify.mutate()}
+          disabled={isBusy || server.status === "qualifying"}
+          className="gap-2"
+        >
+          <RefreshCw size={15} className={qualify.isPending ? "animate-spin" : ""} />
+          {qualify.isPending ? "Checking…" : "Run Health Check"}
+        </Button>
+      </div>
+
       {/* ── Server info ── */}
-      <div className="bg-card border border-border rounded-lg">
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
         <div className="px-4 py-3 border-b border-border">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Server Info
@@ -257,24 +259,34 @@ export default function ServerDetail() {
             { label: "Bootstrapped",  value: server.bootstrapped_at
                 ? new Date(server.bootstrapped_at).toLocaleString()
                 : "Never" },
-            { label: "Last Preflight", value: server.last_qualified_at
+            { label: "Last Health Check", value: server.last_qualified_at
                 ? new Date(server.last_qualified_at).toLocaleString()
                 : "Never" },
           ].map(({ label, value, mono }) => (
-            <div key={label} className="bg-card px-4 py-3">
+            <div key={label} className="bg-card px-4 py-3.5">
               <InfoRow label={label} value={value} mono={mono} />
             </div>
           ))}
         </div>
       </div>
 
-      {/* ── Preflight results ── */}
+      {/* ── Health check results ── */}
       {server.qualify_results.length > 0 && (
-        <div className="bg-card border border-border rounded-lg">
-          <div className="px-4 py-3 border-b border-border">
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
+          <div className="px-4 py-3 border-b border-border flex items-center justify-between">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Health Check Results
             </h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs gap-1.5"
+              onClick={() => qualify.mutate()}
+              disabled={isBusy}
+            >
+              <RefreshCw size={12} className={qualify.isPending ? "animate-spin" : ""} />
+              Re-run
+            </Button>
           </div>
           <div className="divide-y divide-border">
             {server.qualify_results.map((r) => (
@@ -292,17 +304,17 @@ export default function ServerDetail() {
 
       {/* ── Environments ── */}
       <div>
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3 px-1">
           Environments on this server
         </h2>
 
         {envs.length === 0 ? (
-          <div className="border border-dashed border-border rounded-lg py-10 text-center">
+          <div className="border-2 border-dashed border-border rounded-xl py-10 text-center">
             <ServerIcon size={20} className="text-muted-foreground/30 mx-auto mb-2" />
             <p className="text-sm text-muted-foreground">No environments deployed here yet.</p>
           </div>
         ) : (
-          <div className="border border-border rounded-lg overflow-hidden bg-card">
+          <div className="border border-border rounded-xl overflow-hidden bg-card">
             {envs.map((env, i) => {
               const project = projects?.find((p) => p.id === env.project_id)
               return (

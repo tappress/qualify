@@ -54,6 +54,8 @@ class Server(BaseModel):
     last_qualified_at: Optional[datetime] = None
     qualify_results: list[CheckResult] = []
     last_error: Optional[str] = None
+    wg_ip: Optional[str] = None             # assigned WireGuard IP, e.g. "10.100.0.1"
+    wg_public_key: Optional[str] = None     # WireGuard public key for peer setup
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
@@ -134,32 +136,49 @@ class EnvironmentUpdate(BaseModel):
 
 # ── Project ───────────────────────────────────────────────────────────────────
 
+class Process(BaseModel):
+    """A named process that runs from the project's image.
+
+    Convention (Heroku/Procfile): the process named "web" is the only one that
+    receives public HTTP routing via Traefik. All others run as internal
+    background services (workers, schedulers, etc.).
+    """
+    name: str           # "web", "worker", "beat", etc.
+    command: str = ""   # override container CMD; empty = use image default
+    replicas: int = 1
+
+
 class Project(BaseModel):
     id: str = Field(default_factory=_uid)
-    name: str
-    git_url: str
+    name: str                           # service name, e.g. "backend"
+    group: str = ""                     # app group name, e.g. "myapp" (used in .qualify)
+    git_url: str = ""
     git_branch: str = "main"
     build_context: str = "."
     dockerfile_path: str = "Dockerfile"
     env_template_content: str = ""      # contents of .env.template / .env.example
     build_strategy: Literal["local", "remote"] = "local"
     image_name: str = ""
+    processes: list[Process] = []       # populated from Procfile at build time; empty = single web process
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
 class ProjectCreate(BaseModel):
     name: str
-    git_url: str
+    group: str = ""
+    git_url: str = ""
     git_branch: str = "main"
     build_context: str = "."
     dockerfile_path: str = "Dockerfile"
     env_template_content: str = ""
     build_strategy: Literal["local", "remote"] = "local"
     image_name: str = ""
+    processes: list[Process] = []
 
 
 class ProjectUpdate(BaseModel):
     name: Optional[str] = None
+    group: Optional[str] = None
     git_url: Optional[str] = None
     git_branch: Optional[str] = None
     build_context: Optional[str] = None
@@ -167,6 +186,7 @@ class ProjectUpdate(BaseModel):
     env_template_content: Optional[str] = None
     build_strategy: Optional[Literal["local", "remote"]] = None
     image_name: Optional[str] = None
+    processes: Optional[list[Process]] = None
 
 
 # ── Deployment ────────────────────────────────────────────────────────────────

@@ -12,10 +12,15 @@ ROOT = Path(SPECPATH)
 BACKEND = ROOT / "backend"
 FRONTEND_DIST = ROOT / "frontend" / "dist"
 
+# Bundle the platform-specific nixpacks binary if it was downloaded during build
+_nixpacks_name = "nixpacks.exe" if sys.platform == "win32" else "nixpacks"
+_nixpacks_path = BACKEND / _nixpacks_name
+_nixpacks_binaries = [(str(_nixpacks_path), ".")] if _nixpacks_path.exists() else []
+
 a = Analysis(
     [str(BACKEND / "run.py")],
     pathex=[str(BACKEND), str(BACKEND / "src")],
-    binaries=[],
+    binaries=_nixpacks_binaries,
     datas=[
         # Bundle the built frontend into the binary
         (str(FRONTEND_DIST), "frontend/dist"),

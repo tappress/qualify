@@ -9,28 +9,28 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Plus, ChevronRight, Server as ServerIcon } from "lucide-react"
+import { Plus, ChevronRight, Server as ServerIcon, CheckCircle, AlertCircle, Loader2 } from "lucide-react"
 
-// ── Status badge ──────────────────────────────────────────────────────────────
+// ── Status config ──────────────────────────────────────────────────────────────
 
 const SERVER_STATUS: Record<
   Server["status"],
-  { dot: string; text: string; bg: string; label: string }
+  { dot: string; text: string; bg: string; label: string; icon?: React.ReactNode }
 > = {
   qualified:        { dot: "bg-emerald-500", text: "text-emerald-400", bg: "bg-emerald-500/10", label: "qualified" },
   failed:           { dot: "bg-red-500",     text: "text-red-400",     bg: "bg-red-500/10",     label: "failed" },
   bootstrap_failed: { dot: "bg-red-500",     text: "text-red-400",     bg: "bg-red-500/10",     label: "bootstrap failed" },
   qualifying:       { dot: "bg-blue-400 animate-pulse", text: "text-blue-400", bg: "bg-blue-500/10", label: "qualifying" },
   bootstrapping:    { dot: "bg-blue-400 animate-pulse", text: "text-blue-400", bg: "bg-blue-500/10", label: "bootstrapping" },
-  unknown:          { dot: "bg-zinc-500",    text: "text-zinc-400",    bg: "bg-zinc-500/10",    label: "unknown" },
+  unknown:          { dot: "bg-zinc-500",    text: "text-zinc-400",    bg: "bg-zinc-500/10",    label: "not set up" },
 }
 
-function ServerStatusBadge({ status }: { status: Server["status"] }) {
+function ServerStatusBadge({ status, overrideLabel }: { status: Server["status"]; overrideLabel?: string }) {
   const s = SERVER_STATUS[status] ?? SERVER_STATUS.unknown
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium ${s.bg} ${s.text}`}>
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium ${s.bg} ${s.text}`}>
       <span className={`inline-block w-1.5 h-1.5 rounded-full shrink-0 ${s.dot}`} />
-      {s.label}
+      {overrideLabel ?? s.label}
     </span>
   )
 }
@@ -90,66 +90,88 @@ export default function ServersPage() {
   return (
     <div className="p-6 max-w-4xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Servers</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">SSH execution targets</p>
+          <h1 className="text-2xl font-semibold tracking-tight">Servers</h1>
+          <p className="text-sm text-muted-foreground mt-1">SSH execution targets for your deployments</p>
         </div>
-        <Button onClick={() => setOpen(true)} className="h-9 gap-2">
-          <Plus size={15} />
+        <Button onClick={() => setOpen(true)} size="lg" className="gap-2">
+          <Plus size={16} />
           Add Server
         </Button>
       </div>
 
       {/* Server list */}
       {isLoading ? (
-        <div className="space-y-px rounded-lg overflow-hidden border border-border">
+        <div className="space-y-3">
           {[...Array(3)].map((_, i) => (
-            <Skeleton key={i} className="h-[68px] w-full rounded-none bg-card" />
+            <Skeleton key={i} className="h-20 w-full rounded-xl bg-card" />
           ))}
         </div>
       ) : !servers?.length ? (
-        <div className="border border-dashed border-border rounded-lg py-16 text-center">
-          <ServerIcon size={24} className="text-muted-foreground/30 mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground mb-4">No servers configured yet.</p>
-          <Button onClick={() => setOpen(true)} className="h-9 gap-2">
-            <Plus size={15} />
+        <div className="border-2 border-dashed border-border rounded-xl py-20 text-center">
+          <div className="w-12 h-12 rounded-xl bg-muted/60 flex items-center justify-center mx-auto mb-4">
+            <ServerIcon size={22} className="text-muted-foreground/50" strokeWidth={1.5} />
+          </div>
+          <p className="text-base font-medium mb-1">No servers yet</p>
+          <p className="text-sm text-muted-foreground mb-6">Add a server to start deploying your apps</p>
+          <Button onClick={() => setOpen(true)} size="lg" className="gap-2">
+            <Plus size={16} />
             Add your first server
           </Button>
         </div>
       ) : (
-        <div className="border border-border rounded-lg overflow-hidden">
-          {servers.map((s, i) => (
+        <div className="space-y-3">
+          {servers.map((s) => (
             <div
               key={s.id}
-              className={`flex items-center justify-between px-4 py-4 bg-card hover:bg-muted/30 cursor-pointer transition-colors ${i > 0 ? "border-t border-border" : ""}`}
+              className="flex items-center justify-between px-5 py-4 bg-card border border-border rounded-xl hover:border-border/80 hover:bg-card/80 cursor-pointer transition-all group"
               onClick={() => navigate(`/servers/${s.id}`)}
             >
-              {/* Left: name + connection string */}
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="p-2 rounded-md bg-muted/60 shrink-0">
-                  <ServerIcon size={15} className="text-muted-foreground" strokeWidth={1.5} />
+              {/* Left: icon + info */}
+              <div className="flex items-center gap-4 min-w-0">
+                <div className="w-10 h-10 rounded-lg bg-muted/60 flex items-center justify-center shrink-0">
+                  {(s.status === "bootstrapping" || s.status === "qualifying") ? (
+                    <Loader2 size={18} className="text-blue-400 animate-spin" strokeWidth={1.75} />
+                  ) : s.status === "qualified" ? (
+                    <CheckCircle size={18} className="text-emerald-500" strokeWidth={1.75} />
+                  ) : (s.status === "failed" || s.status === "bootstrap_failed") ? (
+                    <AlertCircle size={18} className="text-red-400" strokeWidth={1.75} />
+                  ) : (
+                    <ServerIcon size={18} className="text-muted-foreground" strokeWidth={1.5} />
+                  )}
                 </div>
                 <div className="min-w-0">
-                  <p className="font-medium text-sm leading-tight">{s.name}</p>
+                  <div className="flex items-center gap-2.5">
+                    <p className="font-semibold text-sm">{s.name}</p>
+                    {s.tags.map((t) => (
+                      <span
+                        key={t}
+                        className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-md font-mono"
+                      >
+                        {t}
+                      </span>
+                    ))}
+                  </div>
                   <p className="text-xs text-muted-foreground font-mono mt-0.5 truncate">
-                    {s.host}{s.port !== 22 ? `:${s.port}` : ""}
+                    {s.user}@{s.host}{s.port !== 22 ? `:${s.port}` : ""}
+                    {s.os_name && (
+                      <span className="ml-2 opacity-60">
+                        · {s.os_name} {s.os_version ?? ""}
+                      </span>
+                    )}
                   </p>
                 </div>
               </div>
 
-              {/* Right: tags + status + chevron */}
-              <div className="flex items-center gap-2 shrink-0">
-                {s.tags.map((t) => (
-                  <span
-                    key={t}
-                    className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded font-mono"
-                  >
-                    {t}
-                  </span>
-                ))}
-                {s.status !== "unknown" && <ServerStatusBadge status={s.status} />}
-                <ChevronRight size={14} className="text-muted-foreground/30 ml-1" />
+              {/* Right: status + chevron */}
+              <div className="flex items-center gap-3 shrink-0">
+                {s.status !== "unknown"
+                  ? <ServerStatusBadge status={s.status} />
+                  : s.bootstrapped_at
+                  ? <ServerStatusBadge status={s.status} overrideLabel="bootstrapped" />
+                  : null}
+                <ChevronRight size={16} className="text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors" />
               </div>
             </div>
           ))}
@@ -203,10 +225,10 @@ export default function ServersPage() {
               <Input placeholder="prod, web" {...field("tags")} />
             </div>
             <div className="flex justify-end gap-2 pt-1">
-              <Button type="button" variant="outline" className="h-9" onClick={() => setOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" className="h-9" disabled={add.isPending}>
+              <Button type="submit" disabled={add.isPending}>
                 {add.isPending ? "Adding…" : "Add Server"}
               </Button>
             </div>
