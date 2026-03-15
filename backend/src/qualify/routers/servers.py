@@ -3,6 +3,7 @@ from fastapi import APIRouter, HTTPException
 from qualify.models.state import CheckResult, ConnectionTestResult, Server, ServerCreate, ServerUpdate
 from qualify.services import preflight, ssh_client, state_manager
 from qualify.services.keyring_store import delete_sudo_password, store_sudo_password
+from qualify.services.provisioner import UnsupportedOSError, detect_os, get_provisioner
 
 router = APIRouter()
 
@@ -72,6 +73,42 @@ async def test_connection(server_id: str):
         server.auth_method = method
         await state_manager.update_servers(state.servers)
     return ConnectionTestResult(success=ok, message=msg, latency_ms=latency)
+
+
+@router.post("/{server_id}/bootstrap")
+async def bootstrap_server(server_id: str):
+    state = await state_manager.get_state()
+    server = next((s for s in state.servers if s.id == server_id), None)
+    if not server:
+        raise HTTPException(404, f"Server {server_id} not found")
+
+    server.status = "bootstrapping"
+    await state_manager.update_servers(state.servers)
+
+    conn, _ = await ssh_client.get_connection(server)
+    os_info = None
+    try:
+        os_info = await detect_os(conn)
+        provisioner = get_provisioner(os_info)
+        await provisioner.bootstrap(conn)
+        server.status = "unknown"  # ready for qualify
+        server.bootstrapped_at = datetime.now(timezone.utc)
+        server.os_id = os_info.id
+        server.os_name = os_info.name
+        server.os_version = os_info.version
+    except UnsupportedOSError as e:
+        server.status = "bootstrap_failed"
+        await state_manager.update_servers(state.servers)
+        raise HTTPException(422, str(e))
+    except Exception as e:
+        server.status = "bootstrap_failed"
+        await state_manager.update_servers(state.servers)
+        raise HTTPException(500, str(e))
+    finally:
+        conn.close()
+
+    await state_manager.update_servers(state.servers)
+    return {"ok": True, "os": os_info.model_dump()}
 
 
 @router.post("/{server_id}/qualify", response_model=list[CheckResult])

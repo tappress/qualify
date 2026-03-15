@@ -46,7 +46,11 @@ class Server(BaseModel):
     # sudo password stored in OS keyring under "qualify:{id}:sudo"
     tags: list[str] = []
     public_ip: Optional[str] = None  # detected during qualify
-    status: Literal["unknown", "qualified", "failed", "qualifying"] = "unknown"
+    status: Literal["unknown", "bootstrapping", "bootstrap_failed", "qualified", "failed", "qualifying"] = "unknown"
+    bootstrapped_at: Optional[datetime] = None
+    os_id: Optional[str] = None
+    os_name: Optional[str] = None
+    os_version: Optional[str] = None
     last_qualified_at: Optional[datetime] = None
     qualify_results: list[CheckResult] = []
     created_at: datetime = Field(default_factory=datetime.utcnow)

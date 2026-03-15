@@ -14,7 +14,12 @@ export interface Server {
   ssh_key_path: string
   tags: string[]
   public_ip?: string
-  status: "unknown" | "qualified" | "failed" | "qualifying"
+  auth_method?: "key" | "password"
+  status: "unknown" | "bootstrapping" | "bootstrap_failed" | "qualified" | "failed" | "qualifying"
+  bootstrapped_at?: string
+  os_id?: string
+  os_name?: string
+  os_version?: string
   last_qualified_at?: string
   qualify_results: CheckResult[]
   created_at: string
