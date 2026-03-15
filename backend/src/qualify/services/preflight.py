@@ -6,7 +6,7 @@ async def run_preflight(server: Server) -> list[CheckResult]:
     results: list[CheckResult] = []
 
     try:
-        conn = await ssh_client.get_connection(server)
+        conn, _ = await ssh_client.get_connection(server)
     except Exception as e:
         return [CheckResult(check="ssh_connect", status="fail", message=str(e))]
 

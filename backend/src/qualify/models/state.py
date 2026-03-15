@@ -41,7 +41,8 @@ class Server(BaseModel):
     host: str
     port: int = 22
     user: str
-    ssh_key_path: str = "~/.ssh/id_rsa"
+    ssh_key_path: Optional[str] = None
+    auth_method: Optional[Literal["key", "password"]] = None  # detected on first successful connect
     # sudo password stored in OS keyring under "qualify:{id}:sudo"
     tags: list[str] = []
     public_ip: Optional[str] = None  # detected during qualify
@@ -56,7 +57,7 @@ class ServerCreate(BaseModel):
     host: str
     port: int = 22
     user: str
-    ssh_key_path: str = "~/.ssh/id_rsa"
+    ssh_key_path: Optional[str] = None
     sudo_password: Optional[str] = None  # sent once, stored in keyring, never persisted
     tags: list[str] = []
 

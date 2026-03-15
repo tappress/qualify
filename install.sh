@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO="tappress/qualify"   # TODO: update before release
+REPO="tappress/qualify"
 BIN_DIR="${HOME}/.local/bin"
 BINARY="${BIN_DIR}/qualify"
 

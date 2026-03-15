@@ -63,10 +63,14 @@ async def delete_server(server_id: str):
 
 @router.post("/{server_id}/test-connection", response_model=ConnectionTestResult)
 async def test_connection(server_id: str):
-    server = await state_manager.get_server(server_id)
+    state = await state_manager.get_state()
+    server = next((s for s in state.servers if s.id == server_id), None)
     if not server:
         raise HTTPException(404, f"Server {server_id} not found")
-    ok, msg, latency = await ssh_client.test_connection(server)
+    ok, msg, latency, method = await ssh_client.test_connection(server)
+    if ok and method and server.auth_method != method:
+        server.auth_method = method
+        await state_manager.update_servers(state.servers)
     return ConnectionTestResult(success=ok, message=msg, latency_ms=latency)
 
 

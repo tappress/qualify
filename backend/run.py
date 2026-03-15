@@ -15,6 +15,7 @@ if sys.platform == "win32":
 
 import uvicorn
 from qualify.main import app
+from qualify.services.auth import get_token
 
 PORT = int(os.environ.get("QUALIFY_PORT", 65432))
 
@@ -29,7 +30,7 @@ def _is_wsl() -> bool:
 def _open_browser() -> None:
     import time
     time.sleep(1.5)
-    url = f"http://localhost:{PORT}"
+    url = f"http://localhost:{PORT}/?token={get_token()}"
     if _is_wsl():
         # Open in the Windows host browser; powershell avoids cmd.exe UNC path noise
         import subprocess

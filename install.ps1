@@ -1,7 +1,7 @@
 # Qualify installer for Windows
 # Usage: powershell -ExecutionPolicy ByPass -c "irm https://raw.githubusercontent.com/tappress/qualify/main/install.ps1 | iex"
 
-$Repo    = "tappress/qualify"   # TODO: update before release
+$Repo    = "tappress/qualify"
 $BinDir  = "$env:LOCALAPPDATA\qualify"
 $Binary  = "$BinDir\qualify.exe"
 $Asset   = "qualify-windows-x86_64.exe"

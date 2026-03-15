@@ -1,9 +1,9 @@
 .PHONY: build install dev clean
 
 VENV        := backend/.venv
-PYTHON      := $(VENV)/bin/python
-PIP         := $(VENV)/bin/pip
-PYINSTALLER := $(VENV)/bin/pyinstaller
+PYTHON      := $(abspath $(VENV))/bin/python
+PIP         := $(abspath $(VENV))/bin/pip
+PYINSTALLER := $(abspath $(VENV))/bin/pyinstaller
 
 # ── Full local build + install ─────────────────────────────────────────────
 build: $(VENV) frontend/dist

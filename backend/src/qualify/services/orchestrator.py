@@ -126,7 +126,7 @@ async def run_deployment(deployment_id: str, project: Project, env: Environment,
         await set_stage("remote_pull", "running")
         t0 = asyncio.get_event_loop().time()
         await log("remote_pull", f"Connecting to {server.host}")
-        conn = await ssh_client.get_connection(server)
+        conn, _ = await ssh_client.get_connection(server)
 
         if registry.url:
             rc, out, err = await ssh_client.exec_command(conn, f"docker pull {full_tag}")

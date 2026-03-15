@@ -1,12 +1,13 @@
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from qualify.routers import servers, projects, environments, deployments, logs, settings as settings_router
 from qualify.services.state_manager import get_state
+from qualify.services.auth import verify_token
 
 # When frozen by PyInstaller, bundled files are in sys._MEIPASS.
 # In dev, the frontend is served by the Vite dev server (port 65432) instead.
@@ -25,9 +26,25 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Qualify API", version="0.1.0", lifespan=lifespan)
 
+
+@app.middleware("http")
+async def auth_middleware(request: Request, call_next):
+    # Only enforce auth in the frozen binary (production). In dev mode
+    # (make dev / uvicorn --reload) auth is skipped for convenience.
+    if getattr(sys, "frozen", False) and request.url.path.startswith("/api"):
+        auth = request.headers.get("Authorization", "")
+        token = auth.removeprefix("Bearer ").strip()
+        # Fall back to ?token= query param for SSE (EventSource can't set headers)
+        if not token:
+            token = request.query_params.get("token", "")
+        if not verify_token(token):
+            return JSONResponse({"detail": "Unauthorized"}, status_code=401)
+    return await call_next(request)
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:65432"],
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1):\d+",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -44,6 +61,13 @@ app.include_router(settings_router.router,  prefix="/api/settings",             
 @app.get("/api/health")
 async def health():
     return {"status": "ok", "version": "0.1.0"}
+
+
+@app.get("/api/environments")
+async def list_all_environments():
+    """Flat list of all environments across all projects (used by server detail view)."""
+    state = await get_state()
+    return state.environments
 
 
 # Serve bundled frontend in production (frozen binary only)
